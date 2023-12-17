@@ -1,8 +1,12 @@
 import { useState } from "react";
 
-function Square({ value, onClick }) {
+
+function Square({ value, onClick, highlight = false }) {
   return (
-    <button className="square" onClick={onClick}>
+    <button
+      className={"square" + (highlight ? " square-winning" : "")}
+      onClick={onClick}
+    >
       {value}
     </button>
   );
@@ -10,7 +14,7 @@ function Square({ value, onClick }) {
 
 function Board({ board, letter, onPlay }) {
   function handleClick(i) {
-    if (board[i] || calcWinner(board)) {
+    if (board[i] || calcWinner(board).winner) {
       return;
     }
     const newBoard = board.slice();
@@ -18,32 +22,41 @@ function Board({ board, letter, onPlay }) {
     onPlay(newBoard);
   }
 
-  let winner = calcWinner(board);
+  let { winner, triple } = calcWinner(board);
+  console.log(triple);
   let status;
   if (winner) {
     status = "Dang. How in the world did u just lose to " + winner;
+  } else if (!board.includes(null)) {
+    status = "Wow. Neither won."
   } else {
     status = "Next player is: " + letter;
   }
-  console.log("YO: " + board);
+
+  let boardRows = [...Array(3).keys()].map((row) => {
+    let boardCols = [...Array(3).keys()].map((col) => {
+      let i = row * 3 + col;
+      let highlight = false;
+      if (triple && triple.includes(i)) highlight = true;
+      return (
+        <Square
+          key={i}
+          value={board[i]}
+          onClick={() => handleClick(i)}
+          highlight={highlight}
+        />
+      );
+    });
+    return (
+      <div key={row} className="board-row">
+        {boardCols}
+      </div>
+    );
+  });
   return (
     <>
       <div>{status}</div>
-      <div className="board-row">
-        <Square value={board[0]} onClick={() => handleClick(0)} />
-        <Square value={board[1]} onClick={() => handleClick(1)} />
-        <Square value={board[2]} onClick={() => handleClick(2)} />
-      </div>
-      <div className="board-row">
-        <Square value={board[3]} onClick={() => handleClick(3)} />
-        <Square value={board[4]} onClick={() => handleClick(4)} />
-        <Square value={board[5]} onClick={() => handleClick(5)} />
-      </div>
-      <div className="board-row">
-        <Square value={board[6]} onClick={() => handleClick(6)} />
-        <Square value={board[7]} onClick={() => handleClick(7)} />
-        <Square value={board[8]} onClick={() => handleClick(8)} />
-      </div>
+      {boardRows}
     </>
   );
 }
@@ -52,14 +65,10 @@ export default function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
   const [letter, setLetter] = useState("X");
   const [currentMove, setMove] = useState(0);
-  let currentGame = history[history.length - 1];
-  // setCurrentGame(history[history.length - 1]);
-  // let currentGame = history[history.length - 1];
-  console.log("RENDER: " + currentGame);
+  const [ascending, setAscending] = useState(1); //1 = chronological
+
   function jumpTo(i) {
-    // currentGame = history[i + 1];
     setMove(i);
-    console.log(currentGame);
     if (i % 2 === 0) {
       setLetter("X");
     } else {
@@ -76,7 +85,11 @@ export default function Game() {
     }
     return (
       <li key={move}>
-        <button onClick={() => jumpTo(move)}>{desc}</button>
+        {move !== history.length - 1 ? (
+          <button onClick={() => jumpTo(move)}>{desc}</button>
+        ) : (
+          <button onClick={() => jumpTo(move)}>{desc}</button>
+        )}
       </li>
     );
   });
@@ -95,16 +108,28 @@ export default function Game() {
     <>
       <div className="game">
         <div className="game-board">
-          <Board letter={letter} onPlay={handleClick} board={history[currentMove]} />
-          {/* {console.log("sus" + currentGame)} */}
+          <Board
+            letter={letter}
+            onPlay={handleClick}
+            board={history[currentMove]}
+          />
         </div>
         <div className="game-info">
-          <ol>{moves}</ol>
+          <ol>
+            <button
+              className="sort-order"
+              onClick={() => setAscending(ascending * -1)}
+            >
+              Ascending?
+            </button>
+          </ol>
+          <ol>{ascending === 1 ? moves : moves.slice().reverse()}</ol>
         </div>
       </div>
     </>
   );
 }
+
 function calcWinner(board) {
   let wins = [
     [0, 3, 6],
@@ -119,7 +144,7 @@ function calcWinner(board) {
   for (let i = 0; i < wins.length; i++) {
     const [x, y, z] = wins[i];
     const [a, b, c] = [board[x], board[y], board[z]];
-    if (a === b && b === c && a) return a;
+    if (a === b && b === c && a) return { winner: a, triple: wins[i] };
   }
-  return null;
+  return {};
 }
