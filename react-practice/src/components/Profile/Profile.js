@@ -1,5 +1,10 @@
+import Person from '../Person'
+
 export default function Profile() {
   return (
-    <img src="https://i.imgur.com/MK3eW3As.jpg"/> 
+    <div>
+      Yo. This is a Person
+      <Person url="https://i.imgur.com/YfeOqp2"/>
+    </div>
   );
 }
